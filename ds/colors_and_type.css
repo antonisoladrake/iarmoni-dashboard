@@ -1,0 +1,275 @@
+/* ============================================================
+   iArmoni Design System — Colors & Type
+   Source of truth for brand tokens.
+   ============================================================ */
+
+/* ---------- Web fonts ----------
+   Primary: Inter (substituted for the undisclosed brand sans
+   seen on iarmoni.eu — closest modern geometric match).
+   Display: Manrope (tighter tracking, gentle warmth,
+   pairs well with Inter at large sizes).
+   Mono: JetBrains Mono (for data, IDs, codes).
+   Google Fonts CDN — self-host for production. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  /* ------------------------------------------------------------
+     BRAND COLORS — iArmoni purple is the primary brand identity.
+     The hero logo uses a purple→violet→blue gradient; solid UI
+     uses the saturated brand-600.
+     ------------------------------------------------------------ */
+  --brand-50:  #F5F1FF;
+  --brand-100: #EBE3FF;
+  --brand-200: #D6C6FF;
+  --brand-300: #B79EFF;
+  --brand-400: #9472FB;
+  --brand-500: #7A4EF0;   /* lighter accent */
+  --brand-600: #6D28D9;   /* PRIMARY — buttons, links, active */
+  --brand-700: #5B21B6;
+  --brand-800: #4C1D95;
+  --brand-900: #3B1780;
+
+  /* Brand gradient (logo, hero accents, marquee moments) */
+  --brand-gradient: linear-gradient(135deg, #7A4EF0 0%, #6D28D9 45%, #3A6FE0 100%);
+  --brand-gradient-soft: linear-gradient(135deg, #EEE8FF 0%, #E3EEFF 100%);
+
+  /* ------------------------------------------------------------
+     CLINICAL BLUE — secondary accent for data, status, links
+     in body copy, and areas where purple would feel too warm
+     (medical records, compliance, certifications).
+     ------------------------------------------------------------ */
+  --blue-50:  #EFF6FF;
+  --blue-100: #DBEAFE;
+  --blue-300: #93C5FD;
+  --blue-500: #3B82F6;
+  --blue-600: #2563EB;
+  --blue-700: #1D4ED8;
+
+  /* ------------------------------------------------------------
+     NEUTRALS — cool-slate grays, high contrast, print-friendly.
+     Used for text, surfaces, dividers. The backbone of the UI.
+     ------------------------------------------------------------ */
+  --ink-0:    #FFFFFF;
+  --ink-25:   #FAFBFC;    /* page bg subtle */
+  --ink-50:   #F5F7FA;    /* sidebar, muted surfaces */
+  --ink-100:  #EEF1F5;    /* dividers light, chip bg */
+  --ink-200:  #E2E6EC;    /* borders */
+  --ink-300:  #CBD2DC;
+  --ink-400:  #9AA3B2;    /* placeholder, disabled fg */
+  --ink-500:  #6B7280;    /* muted text */
+  --ink-600:  #4B5563;    /* secondary text */
+  --ink-700:  #334155;    /* body */
+  --ink-800:  #1F2937;    /* strong text */
+  --ink-900:  #0B1220;    /* display text, near-black */
+
+  /* ------------------------------------------------------------
+     SEMANTIC — soft pill tones matched to the dashboard photo
+     (High=red, Medium=amber, Low=slate, plus Success green).
+     Backgrounds are tinted, foregrounds are saturated.
+     ------------------------------------------------------------ */
+  --success-50:  #ECFDF5;
+  --success-500: #10B981;
+  --success-700: #047857;
+
+  --warn-50:   #FFFBEB;
+  --warn-500:  #F59E0B;
+  --warn-700:  #B45309;
+
+  --danger-50:  #FEF2F2;
+  --danger-500: #EF4444;
+  --danger-700: #B91C1C;
+
+  --info-50:  #EFF6FF;
+  --info-500: #3B82F6;
+  --info-700: #1D4ED8;
+
+  /* ------------------------------------------------------------
+     SEMANTIC TOKENS — prefer these in components so light/dark
+     themes swap cleanly.
+     ------------------------------------------------------------ */
+  --fg-1: var(--ink-900);        /* headings */
+  --fg-2: var(--ink-700);        /* body */
+  --fg-3: var(--ink-500);        /* muted */
+  --fg-4: var(--ink-400);        /* placeholder / disabled */
+  --fg-on-brand: #FFFFFF;
+  --fg-link: var(--brand-600);
+
+  --bg-page: var(--ink-0);
+  --bg-subtle: var(--ink-25);
+  --bg-muted: var(--ink-50);
+  --bg-elevated: #FFFFFF;
+
+  --border-subtle: var(--ink-100);
+  --border-default: var(--ink-200);
+  --border-strong: var(--ink-300);
+  --border-focus: var(--brand-500);
+
+  /* ------------------------------------------------------------
+     TYPOGRAPHY
+     ------------------------------------------------------------ */
+  --font-sans:    'Inter', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --font-display: 'Manrope', 'Inter', system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
+
+  /* Fluid type scale — tuned for premium SaaS marketing + product UI */
+  --fs-display-xl: clamp(3.5rem, 5.6vw + 0.5rem, 5.75rem); /* 56→92px */
+  --fs-display-l:  clamp(2.75rem, 3.4vw + 1rem, 4rem);     /* 44→64px */
+  --fs-display-m:  clamp(2rem, 1.6vw + 1.2rem, 2.75rem);   /* 32→44px */
+  --fs-h1:         clamp(1.75rem, 1vw + 1.25rem, 2.25rem); /* 28→36 */
+  --fs-h2:         1.5rem;   /* 24 */
+  --fs-h3:         1.25rem;  /* 20 */
+  --fs-h4:         1.0625rem;/* 17 */
+  --fs-body-lg:    1.125rem; /* 18 — marketing body */
+  --fs-body:       1rem;     /* 16 */
+  --fs-body-sm:    0.9375rem;/* 15 */
+  --fs-caption:    0.8125rem;/* 13 */
+  --fs-micro:      0.6875rem;/* 11 — eyebrow/label */
+
+  --lh-tight:  1.1;
+  --lh-snug:   1.25;
+  --lh-normal: 1.5;
+  --lh-relaxed:1.65;
+
+  --tracking-tight:  -0.02em;
+  --tracking-snug:   -0.01em;
+  --tracking-normal: 0;
+  --tracking-eyebrow: 0.14em;
+
+  /* ------------------------------------------------------------
+     SHAPE / RADII — soft-modern, generous but not friendly-app.
+     ------------------------------------------------------------ */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;   /* inputs, small cards */
+  --radius-lg: 14px;   /* cards, modals */
+  --radius-xl: 20px;   /* hero tiles */
+  --radius-2xl: 28px;
+  --radius-pill: 999px;
+
+  /* ------------------------------------------------------------
+     ELEVATION — minimal, cool-toned shadows. Never heavy.
+     ------------------------------------------------------------ */
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.06), 0 2px 4px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.08), 0 4px 8px rgba(15, 23, 42, 0.04);
+  --shadow-xl: 0 24px 64px rgba(15, 23, 42, 0.12);
+  --shadow-focus: 0 0 0 4px rgba(109, 40, 217, 0.18);
+
+  /* Inner shadows (input states) */
+  --shadow-inset: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+
+  /* ------------------------------------------------------------
+     SPACING — 4px base, inflates for generous whitespace SaaS
+     ------------------------------------------------------------ */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+  --space-32: 128px;
+
+  /* Container widths (marketing) */
+  --container-sm: 640px;
+  --container-md: 960px;
+  --container-lg: 1200px;
+  --container-xl: 1320px;
+
+  /* Motion */
+  --ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-emphasized: cubic-bezier(0.32, 0.72, 0, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 320ms;
+  --dur-slower: 520ms;
+}
+
+/* ============================================================
+   SEMANTIC TYPOGRAPHY CLASSES — use these, not raw font vars.
+   ============================================================ */
+.t-display-xl,
+.t-display-l,
+.t-display-m,
+.t-h1, .t-h2, .t-h3, .t-h4 {
+  font-family: var(--font-display);
+  color: var(--fg-1);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--lh-tight);
+  font-weight: 700;
+  text-wrap: balance;
+}
+
+.t-display-xl { font-size: var(--fs-display-xl); font-weight: 800; letter-spacing: -0.025em; }
+.t-display-l  { font-size: var(--fs-display-l);  font-weight: 800; }
+.t-display-m  { font-size: var(--fs-display-m);  font-weight: 700; }
+
+.t-h1 { font-size: var(--fs-h1); line-height: var(--lh-snug); }
+.t-h2 { font-size: var(--fs-h2); line-height: var(--lh-snug); letter-spacing: var(--tracking-snug); }
+.t-h3 { font-size: var(--fs-h3); line-height: var(--lh-snug); letter-spacing: var(--tracking-snug); font-weight: 600; }
+.t-h4 { font-size: var(--fs-h4); line-height: var(--lh-snug); font-weight: 600; }
+
+.t-body-lg,
+.t-body,
+.t-body-sm,
+.t-caption {
+  font-family: var(--font-sans);
+  color: var(--fg-2);
+  line-height: var(--lh-relaxed);
+  text-wrap: pretty;
+}
+
+.t-body-lg { font-size: var(--fs-body-lg); line-height: var(--lh-normal); }
+.t-body    { font-size: var(--fs-body);    line-height: var(--lh-normal); }
+.t-body-sm { font-size: var(--fs-body-sm); line-height: var(--lh-normal); }
+.t-caption { font-size: var(--fs-caption); line-height: var(--lh-normal); color: var(--fg-3); }
+
+.t-eyebrow {
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--brand-600);
+}
+
+.t-mono { font-family: var(--font-mono); font-size: var(--fs-caption); }
+
+/* Link default */
+.t-link {
+  color: var(--fg-link);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color var(--dur-fast) var(--ease-standard);
+}
+.t-link:hover { border-bottom-color: currentColor; }
+
+/* Gradient display text (sparingly — hero moments only) */
+.t-gradient {
+  background: var(--brand-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ============================================================
+   BASELINE RESET / PAGE DEFAULTS
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: var(--lh-normal);
+  color: var(--fg-2);
+  background: var(--bg-page);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

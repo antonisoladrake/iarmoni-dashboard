@@ -1,0 +1,1710 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Armoni · Dashboard de Calidad</title>
+
+  <!-- Tailwind Play CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            armoni: {
+              50:  '#F5F3FF',
+              100: '#EDE9FE',
+              200: '#DDD6FE',
+              300: '#C4B5FD',
+              400: '#A78BFA',
+              500: '#8B5CF6',
+              600: '#7C3AED',
+              700: '#6D28D9',
+              800: '#5B21B6',
+              900: '#4C1D95',
+            },
+            mint: {
+              50:  '#ECFDF5',
+              100: '#CCFBF1',
+              200: '#99F6E4',
+              300: '#5EEAD4',
+              400: '#2DD4BF',
+              500: '#14B8A6',
+            },
+            ink: {
+              900: '#0F172A',
+              700: '#334155',
+              500: '#64748B',
+              300: '#CBD5E1',
+              100: '#F1F5F9',
+            },
+          },
+          fontFamily: {
+            sans: ['Inter','system-ui','-apple-system','Segoe UI','Roboto','sans-serif'],
+          },
+          boxShadow: {
+            card: '0 1px 2px rgba(15,23,42,0.04), 0 1px 1px rgba(15,23,42,0.03)',
+            cardHover: '0 4px 16px rgba(124,58,237,0.10), 0 1px 2px rgba(15,23,42,0.04)',
+          },
+        },
+      },
+    };
+  </script>
+
+  <!-- React + ReactDOM + Recharts (UMD) -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/prop-types@15/prop-types.min.js"></script>
+  <script crossorigin src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
+
+  <!-- Babel Standalone (compiles JSX + TS in the browser) -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Inter font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --armoni-primary: #7C3AED;
+      --armoni-primary-dark: #6D28D9;
+      --armoni-primary-soft: #EDE9FE;
+      --armoni-accent-pink: #EC4899;
+      --armoni-accent-cyan: #06B6D4;
+      --bg-app: #F8FAFC;
+      --bg-card: #FFFFFF;
+      --border: #E5E7EB;
+      --text-primary: #0F172A;
+      --text-secondary: #64748B;
+      --ok: #10B981;
+      --warn: #F59E0B;
+      --bad: #EF4444;
+    }
+    html, body, #root { height: 100%; }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg-app);
+      color: var(--text-primary);
+      -webkit-font-smoothing: antialiased;
+    }
+    .logo-grad {
+      background: linear-gradient(135deg, #7C3AED 0%, #A855F7 35%, #EC4899 75%, #06B6D4 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+    .logo-dot {
+      background: linear-gradient(135deg, #EC4899, #7C3AED);
+    }
+    .scroll-fade::-webkit-scrollbar { width: 8px; height: 8px; }
+    .scroll-fade::-webkit-scrollbar-thumb { background: #E5E7EB; border-radius: 999px; }
+    .scroll-fade::-webkit-scrollbar-thumb:hover { background: #CBD5E1; }
+    /* Recharts override */
+    .recharts-cartesian-axis-tick-value { font-size: 11px; fill: #64748B; }
+    .recharts-default-tooltip {
+      border-radius: 10px !important;
+      border: 1px solid #E5E7EB !important;
+      box-shadow: 0 6px 24px rgba(15,23,42,0.08) !important;
+      font-size: 12px !important;
+    }
+    .anim-pop { animation: pop 180ms ease-out both; }
+    @keyframes pop { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+    .anim-fade { animation: fade 180ms ease-out both; }
+    @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+    .focus-ring:focus { outline: 2px solid #C4B5FD; outline-offset: 2px; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel" data-presets="react,typescript">
+  /* =====================================================================
+     Armoni — Dashboard de Calidad
+     React + Recharts + Tailwind (CDN). Tipos TS estilo, sin build step.
+  ===================================================================== */
+  const { useState, useMemo, useEffect, useReducer, useContext, createContext, useRef, Fragment } = React;
+  const {
+    ResponsiveContainer, LineChart, Line, AreaChart, Area, BarChart, Bar,
+    ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine,
+    Legend, Cell,
+  } = Recharts;
+
+  /* ----------------------------------------------------------------------
+     Constants
+  ---------------------------------------------------------------------- */
+  const AREAS = [
+    { id: 1, name: 'Central de Esterilización', short: 'Central',     color: '#7C3AED', icon: 'sterilizer' },
+    { id: 2, name: 'Quirófano',                 short: 'Quirófano',   color: '#A855F7', icon: 'or' },
+    { id: 3, name: 'Seguridad del Paciente',    short: 'Seguridad',   color: '#EC4899', icon: 'shield' },
+    { id: 4, name: 'Cumplimiento Normativo',    short: 'Cumplimiento',color: '#06B6D4', icon: 'doc' },
+    { id: 5, name: 'Sostenibilidad',            short: 'Sostenibilidad',color: '#10B981', icon: 'leaf' },
+  ];
+
+  const HOSPITALS      = ['Hospital de Terrassa', 'Hospital de Sabadell', 'Hospital Sant Joan Despí'];
+  const QUIROFANOS     = Array.from({length: 12}, (_,i) => `Q.${i+1}`);
+  const ESPECIALIDADES = [
+    'Traumatología','Cirugía Digestiva','Cardiovascular','Neurocirugía','Otorrinolaringología',
+    'Oftalmología','Urología','Ginecología','Cirugía Plástica','Pediatría',
+    'Vascular','Torácica','Maxilofacial','Cirugía General','Ortopedia',
+  ];
+  const PROCEDIMIENTOS = [
+    'Apendicectomía','Colecistectomía','Hernioplastia inguinal','Microcirugía laríngea',
+    'Reconstrucción mamaria DIEP','Ligadura de varices','Cataratas','Tiroidectomía',
+    'Reemplazo de rodilla','Reemplazo de cadera','Laminectomía','Septoplastia',
+    'Resección transuretral','Histerectomía','Bypass gástrico',
+  ];
+  const PROVEEDORES    = ['Aesculap','Stryker','Synthes','Medtronic','B. Braun','Olympus','Karl Storz'];
+  const TIPOS_MATERIAL = ['Pinzas','Separadores','Ópticas','Motores','Contenedores','Tijeras','Suturas','Agujas'];
+  const ESTERILIZADORES= ['Autoclave-01','Autoclave-02','Autoclave-03','Autoclave-04','Autoclave-05','Autoclave-06','BajaTemp-01'];
+  const LAVADORAS      = Array.from({length: 8}, (_,i) => `Lav-0${i+1}`.replace('-08','-08'));
+  const TURNOS         = ['Mañana','Tarde','Noche'];
+  const OPERADORES     = ['A. García','M. López','J. Martínez','S. Pérez','L. Sánchez','C. Rodríguez','P. Ruiz','D. Fernández','E. Gómez','N. Jiménez','R. Álvarez','T. Torres'];
+
+  // "Hoy" — la app está localizada en mayo 2026 según contexto
+  const TODAY = new Date(2026, 4, 14); // mes 0-indexed → mayo
+
+  /* ----------------------------------------------------------------------
+     Seeded RNG (mulberry32) — datos deterministas
+  ---------------------------------------------------------------------- */
+  function mulberry32(seed) {
+    return function() {
+      let t = seed += 0x6D2B79F5;
+      t = Math.imul(t ^ t >>> 15, t | 1);
+      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  /* ----------------------------------------------------------------------
+     KPI definitions (15 indicadores)
+  ---------------------------------------------------------------------- */
+  // betterDirection: 'down' = menos es mejor (perdidas, costes); 'up' = más es mejor (cumplimiento)
+  const KPI_DEFS = [
+    // ÁREA 1
+    { id:'k1_1', area:1, name:'Instrumental perdido vs. inventario total', short:'Pérdida de inventario', unit:'%', decimals:2,
+      base: 0.27, drift: -0.014, noise: 0.025, betterDirection:'down',
+      target:{type:'lt', value:0.20}, standard:null, formula:'(Piezas perdidas) / (Total piezas activas) × 100',
+      breakdowns:['Por servicio','Por especialidad','Por tipo de material'] },
+    { id:'k1_2', area:1, name:'Coste económico del instrumental perdido', short:'Coste perdido', unit:'€', decimals:0,
+      base: 68000, drift: -2800, noise: 5500, betterDirection:'down',
+      target:{type:'lt', value:30000}, standard:null, formula:'Σ Coste adquisición piezas perdidas (€)',
+      breakdowns:['Por tipo de instrumento','Por servicio','Top-10 piezas más caras'] },
+    { id:'k1_3', area:1, name:'Tasa de re-esterilización por caducidad', short:'Re-esterilización caducidad', unit:'%', decimals:2,
+      base: 0.84, drift: -0.025, noise: 0.07, betterDirection:'down',
+      target:{type:'lt', value:1.0}, standard:'Guía UCE MSSSI 2011, Tabla 7.1',
+      formula:'(Productos re-esterilizados por caducidad) / (Total esterilizados) × 100',
+      breakdowns:['Por tipo de envase'] },
+    { id:'k1_4', area:1, name:'Tasa de ciclos conformes por esterilizador', short:'Ciclos conformes', unit:'%', decimals:2,
+      base: 99.42, drift: 0.025, noise: 0.18, betterDirection:'up',
+      target:{type:'gte', value:99}, standard:'UNE-EN ISO 17665-1, UNE-EN 285',
+      formula:'(Cargas con todos los indicadores correctos) / (Total cargas) × 100',
+      breakdowns:['Por esterilizador individual'] },
+    { id:'k1_5', area:1, name:'Tiempo medio de ciclo completo (turnaround)', short:'Turnaround', unit:'h', decimals:2,
+      base: 5.4, drift: -0.10, noise: 0.25, betterDirection:'down',
+      target:null, standard:null, formula:'Promedio (Hora liberación estéril − Hora recepción sucio)',
+      breakdowns:['Distribución por franja horaria','Percentil 90'] },
+
+    // ÁREA 2
+    { id:'k2_1', area:2, name:'Ratio de utilización del instrumental enviado', short:'Utilización quirófano', unit:'%', decimals:1,
+      base: 68, drift: 0.7, noise: 1.6, betterDirection:'up',
+      target:{type:'gte', value:75}, standard:null,
+      formula:'(Instrumentos utilizados) / (Instrumentos enviados) × 100',
+      breakdowns:['Por especialidad','Por tipo de intervención','Por quirófano'] },
+    { id:'k2_2', area:2, name:'Incidencias por instrumental incompleto', short:'Incidencias material', unit:'%', decimals:2,
+      base: 5.4, drift: -0.30, noise: 0.50, betterDirection:'down',
+      target:{type:'eq', value:0}, standard:null,
+      formula:'(Intervenciones con incidencia) / (Total intervenciones) × 100',
+      breakdowns:['Listado detallado para análisis causa raíz'] },
+    { id:'k2_3', area:2, name:'Colisiones detectadas vs. resueltas', short:'Colisiones resueltas', unit:'%', decimals:1,
+      base: 95, drift: 0.30, noise: 1.2, betterDirection:'up',
+      target:{type:'gte', value:98}, standard:null,
+      formula:'(Colisiones resueltas antes de impacto) / (Total colisiones) × 100',
+      breakdowns:['Nº absoluto detectadas / resueltas'] },
+
+    // ÁREA 3
+    { id:'k3_1', area:3, name:'No conformidades en material estéril entregado', short:'No conformidades', unit:'%', decimals:2,
+      base: 1.20, drift: -0.045, noise: 0.10, betterDirection:'down',
+      target:{type:'lt', value:0.8}, standard:'Estándar esencial acreditación Cataluña 9c-02-E54',
+      formula:'(Incidencias material estéril) / (Total entregas) × 100',
+      breakdowns:['Por tipo de no conformidad'] },
+    { id:'k3_2', area:3, name:'Tasa de errores en empaquetado', short:'Errores empaquetado', unit:'%', decimals:2,
+      base: 2.10, drift: -0.06, noise: 0.18, betterDirection:'down',
+      target:{type:'lt', value:2.0}, standard:'Guía UCE MSSSI, UNE-EN ISO 11607',
+      formula:'(Defectos detectados) / (Total paquetes preparados) × 100',
+      breakdowns:[] },
+    { id:'k3_3', area:3, name:'Trazabilidad completa hasta intervención', short:'Trazabilidad completa', unit:'%', decimals:2,
+      base: 96.5, drift: 0.27, noise: 0.35, betterDirection:'up',
+      target:{type:'eq', value:100}, standard:'RD 192/2023, Reglamento MDR',
+      formula:'(Instrumentos con trazabilidad inversa) / (Total usados) × 100',
+      breakdowns:['Por etapa donde se pierde traza'] },
+
+    // ÁREA 4
+    { id:'k4_1', area:4, name:'Completitud del registro documental', short:'Completitud registro', unit:'%', decimals:2,
+      base: 97.5, drift: 0.22, noise: 0.35, betterDirection:'up',
+      target:{type:'eq', value:100}, standard:'RD 192/2023 Art. 8.d',
+      formula:'% de los 4 registros obligatorios completados sobre el total requerido',
+      breakdowns:['Por tipo de registro','Detalle de registros faltantes'],
+      subRegisters: [
+        { id:'qext', name:'Control químico externo',  desc:'Por cada material esterilizado',  base: 99.1, drift: 0.04, noise: 0.22, scope:'material' },
+        { id:'qint', name:'Control químico interno',  desc:'Por cada material esterilizado',  base: 98.3, drift: 0.06, noise: 0.30, scope:'material' },
+        { id:'bio',  name:'Control biológico',        desc:'Diario por autoclave',            base: 95.6, drift: 0.20, noise: 0.55, scope:'diario'   },
+        { id:'bd',   name:'Bowie-Dick',               desc:'Diario por autoclave',            base: 96.9, drift: 0.14, noise: 0.40, scope:'diario'   },
+      ],
+    },
+    { id:'k4_2', area:4, name:'Pruebas de Bowie-Dick documentadas', short:'Bowie-Dick', unit:'%', decimals:1,
+      base: 96.5, drift: 0.3, noise: 0.7, betterDirection:'up',
+      target:{type:'eq', value:100}, standard:'UNE-EN 285',
+      formula:'(Días con B-D registrada × autoclave) / (Días laborables × Nº autoclaves)',
+      breakdowns:['Calendario heatmap por autoclave'] },
+
+    // ÁREA 5
+    { id:'k5_1', area:5, name:'Consumo energético del reprocesado', short:'Consumo energético', unit:'kWh', decimals:0,
+      base: 44500, drift: -550, noise: 1600, betterDirection:'down',
+      target:null, standard:'RD 214/2025',
+      formula:'(Ciclos autoclave × kWh) + (Ciclos lavadora × kWh)',
+      breakdowns:['Comparativa con ciclos evitables','Coste en €'] },
+    { id:'k5_2', area:5, name:'Consumo de agua del reprocesado', short:'Consumo de agua', unit:'L', decimals:0,
+      base: 74500, drift: -800, noise: 2400, betterDirection:'down',
+      target:null, standard:'RD 214/2025, UNE-EN ISO 15883',
+      formula:'Ciclos lavadora × Litros/ciclo',
+      breakdowns:['Coste en €'] },
+    { id:'k5_3', area:5, name:'Ahorro de papel por digitalización', short:'Papel ahorrado', unit:'docs', decimals:0,
+      base: 4500, drift: 480, noise: 350, betterDirection:'up',
+      target:null, standard:'Ley 39/2015',
+      formula:'Nº registros digitales generados',
+      breakdowns:['Coste evitado €','Equivalencia kg papel'] },
+    { id:'k5_4', area:5, name:'Reducción de residuos por optimización', short:'Reducción residuos', unit:'%', decimals:1,
+      base: -6.0, drift: -1.0, noise: 1.2, betterDirection:'down',
+      target:{type:'lt', value:-10}, standard:'Guía SEDE 2023, Cap. 10',
+      formula:'(Sets abiertos innecesariamente actual − anterior) / anterior × 100',
+      breakdowns:['Nº absoluto sets evitados'] },
+    { id:'k5_5', area:5, name:'Huella de carbono del reprocesado', short:'Huella CO₂', unit:'kg CO₂', decimals:0,
+      base: 17800, drift: -240, noise: 650, betterDirection:'down',
+      target:null, standard:'RD 214/2025 — obligatorio 2026',
+      formula:'(kWh × Factor MITECO) + (L agua × Factor agua)',
+      breakdowns:['Desglose energía vs. agua'] },
+  ];
+
+  /* ----------------------------------------------------------------------
+     History generation: 24 meses históricos (para overlay YoY + predicción)
+  ---------------------------------------------------------------------- */
+  function startOfMonth(d) { return new Date(d.getFullYear(), d.getMonth(), 1); }
+  function addMonths(d, n) { return new Date(d.getFullYear(), d.getMonth()+n, 1); }
+  function fmtMonth(d) { return d.toLocaleDateString('es-ES', { month:'short', year:'2-digit' }); }
+  function fmtMonthLong(d) { return d.toLocaleDateString('es-ES', { month:'long', year:'numeric' }); }
+  function fmtDateISO(d) { return d.toISOString().slice(0,10); }
+
+  function makeHistory(kpi) {
+    const rng = mulberry32(kpi.id.split('').reduce((a,c)=>a + c.charCodeAt(0)*31, 7));
+    const months = 24;
+    const out = [];
+    const start = addMonths(startOfMonth(TODAY), -months);
+    let cumulativeDrift = 0;
+    for (let i=0; i<months; i++) {
+      const date = addMonths(start, i);
+      cumulativeDrift = kpi.drift * i;
+      // Estacionalidad ligera (verano: menos actividad → variaciones), aleatorio gaussiano-ish
+      const season = Math.sin((date.getMonth()/12)*Math.PI*2) * (kpi.noise * 0.4);
+      const noise  = (rng()-0.5) * 2 * kpi.noise;
+      // Pico aleatorio puntual
+      const spike  = rng() < 0.05 ? (rng()-0.5) * kpi.noise * 4 : 0;
+      let val = kpi.base + cumulativeDrift + season + noise + spike;
+      // Hard floors / ceilings según unidad
+      if (kpi.unit === '%') {
+        if (kpi.id === 'k5_4') {
+          // Es % de variación: puede ser negativo
+        } else {
+          val = Math.max(0, Math.min(100, val));
+        }
+      }
+      if (['€','kWh','L','docs','kg CO₂','h'].includes(kpi.unit)) val = Math.max(0, val);
+      out.push({ date, value: Number(val.toFixed(kpi.decimals)) });
+    }
+    return out;
+  }
+
+  // Sub-historias (para indicadores compuestos como k4_1)
+  function makeSubHistories(kpi) {
+    if (!kpi.subRegisters) return null;
+    const out = {};
+    kpi.subRegisters.forEach(sub => {
+      const synth = {
+        id: kpi.id + '_' + sub.id,
+        unit: '%',
+        decimals: 2,
+        base: sub.base,
+        drift: sub.drift,
+        noise: sub.noise,
+        betterDirection: 'up',
+      };
+      out[sub.id] = makeHistory(synth);
+    });
+    return out;
+  }
+
+  // Precompute histories once. Para KPIs con sub-registros, la historia agregada
+  // es la media de los 4 sub-registros mes a mes (% medio de completitud).
+  const KPIS = KPI_DEFS.map(k => {
+    if (k.subRegisters) {
+      const subHistories = makeSubHistories(k);
+      const len = subHistories[k.subRegisters[0].id].length;
+      const history = Array.from({ length: len }, (_, i) => {
+        const date = subHistories[k.subRegisters[0].id][i].date;
+        const mean = k.subRegisters.reduce((acc, s) => acc + subHistories[s.id][i].value, 0) / k.subRegisters.length;
+        return { date, value: Number(mean.toFixed(k.decimals)) };
+      });
+      return { ...k, history, subHistories };
+    }
+    return { ...k, history: makeHistory(k) };
+  });
+
+  /* ----------------------------------------------------------------------
+     Period helpers
+  ---------------------------------------------------------------------- */
+  const PERIODS = [
+    { id:'1m',  label:'Último mes',       months: 1 },
+    { id:'3m',  label:'Último trimestre', months: 3 },
+    { id:'6m',  label:'Último semestre',  months: 6 },
+    { id:'12m', label:'Último año',       months: 12 },
+  ];
+
+  function sliceHistory(history, months) {
+    return history.slice(-months);
+  }
+  function sumValues(arr) { return arr.reduce((a,b)=>a+b.value, 0); }
+  function meanValues(arr) { return arr.length ? sumValues(arr)/arr.length : 0; }
+
+  function periodValue(kpi, monthsBack) {
+    const slice = sliceHistory(kpi.history, monthsBack);
+    // Para indicadores acumulables (€, L, kWh, kg CO₂, docs) → suma. El resto → media.
+    if (['€','kWh','L','docs','kg CO₂'].includes(kpi.unit)) return sumValues(slice);
+    return meanValues(slice);
+  }
+
+  function variation(kpi, monthsBack) {
+    const slice = sliceHistory(kpi.history, monthsBack);
+    const prev  = kpi.history.slice(-monthsBack*2, -monthsBack);
+    if (!prev.length) return 0;
+    const cur  = ['€','kWh','L','docs','kg CO₂'].includes(kpi.unit) ? sumValues(slice) : meanValues(slice);
+    const prv  = ['€','kWh','L','docs','kg CO₂'].includes(kpi.unit) ? sumValues(prev)  : meanValues(prev);
+    if (prv === 0) return 0;
+    return ((cur - prv) / Math.abs(prv)) * 100;
+  }
+
+  /* ----------------------------------------------------------------------
+     Format helpers
+  ---------------------------------------------------------------------- */
+  function nf(n, decimals=0) {
+    if (n === null || n === undefined || Number.isNaN(n)) return '—';
+    return n.toLocaleString('es-ES', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  }
+  function fmtValue(kpi, n) {
+    if (n === null || n === undefined || Number.isNaN(n)) return '—';
+    if (kpi.unit === '€')      return '€ ' + nf(n, 0);
+    if (kpi.unit === 'h') {
+      const hours = Math.floor(n);
+      const mins  = Math.round((n-hours)*60);
+      return hours + 'h ' + String(mins).padStart(2,'0') + 'm';
+    }
+    if (kpi.unit === '%')      return nf(n, kpi.decimals) + ' %';
+    if (kpi.unit === 'kWh')    return nf(n, 0) + ' kWh';
+    if (kpi.unit === 'L')      return nf(n, 0) + ' L';
+    if (kpi.unit === 'docs')   return nf(n, 0) + ' docs';
+    if (kpi.unit === 'kg CO₂') return nf(n, 0) + ' kg CO₂';
+    return nf(n, kpi.decimals);
+  }
+
+  /* ----------------------------------------------------------------------
+     Status / color per threshold
+  ---------------------------------------------------------------------- */
+  function statusFor(kpi, value, thresholds) {
+    if (!kpi.target) return 'neutral';
+    const t = thresholds[kpi.id] || kpi.target;
+    const v = value;
+    if (t.type === 'lt') {
+      // menor es mejor: ok < value < warn ≤ critical
+      const warn = t.value * 1.2;
+      if (v < t.value) return 'ok';
+      if (v < warn)    return 'warn';
+      return 'bad';
+    }
+    if (t.type === 'gte') {
+      const warn = t.value * 0.98;
+      if (v >= t.value) return 'ok';
+      if (v >= warn)    return 'warn';
+      return 'bad';
+    }
+    if (t.type === 'eq') {
+      // 100% / 0%
+      if (t.value === 100) {
+        if (v >= 99.5) return 'ok';
+        if (v >= 97)   return 'warn';
+        return 'bad';
+      }
+      if (t.value === 0) {
+        if (v < 0.5) return 'ok';
+        if (v < 2)   return 'warn';
+        return 'bad';
+      }
+    }
+    return 'neutral';
+  }
+
+  const STATUS_COLOR = {
+    ok:      { ring:'ring-emerald-200', bg:'bg-emerald-50',   text:'text-emerald-700', dot:'bg-emerald-500',  hex:'#10B981' },
+    warn:    { ring:'ring-amber-200',   bg:'bg-amber-50',     text:'text-amber-700',   dot:'bg-amber-500',    hex:'#F59E0B' },
+    bad:     { ring:'ring-rose-200',    bg:'bg-rose-50',      text:'text-rose-700',    dot:'bg-rose-500',     hex:'#EF4444' },
+    neutral: { ring:'ring-slate-200',   bg:'bg-slate-50',     text:'text-slate-600',   dot:'bg-slate-400',    hex:'#64748B' },
+  };
+
+  /* ----------------------------------------------------------------------
+     Linear regression (predicción)
+  ---------------------------------------------------------------------- */
+  function linearRegression(points) {
+    const n = points.length;
+    const sx = points.reduce((a,p)=>a+p.x, 0);
+    const sy = points.reduce((a,p)=>a+p.y, 0);
+    const sxx= points.reduce((a,p)=>a+p.x*p.x, 0);
+    const sxy= points.reduce((a,p)=>a+p.x*p.y, 0);
+    const slope = (n*sxy - sx*sy) / (n*sxx - sx*sx);
+    const intercept = (sy - slope*sx) / n;
+    // RMSE
+    const rmse = Math.sqrt(points.reduce((a,p)=>a + Math.pow(p.y - (slope*p.x + intercept), 2), 0) / n);
+    return { slope, intercept, rmse };
+  }
+
+  function predict(history, horizon) {
+    const points = history.map((h,i) => ({ x: i, y: h.value }));
+    const { slope, intercept, rmse } = linearRegression(points);
+    const future = [];
+    const lastDate = history[history.length-1].date;
+    for (let i=1; i<=horizon; i++) {
+      const x = history.length - 1 + i;
+      const yhat = slope*x + intercept;
+      future.push({
+        date: addMonths(lastDate, i),
+        value: Number(yhat.toFixed(2)),
+        lower: Number((yhat - 1.96 * rmse).toFixed(2)),
+        upper: Number((yhat + 1.96 * rmse).toFixed(2)),
+      });
+    }
+    return future;
+  }
+
+  /* ======================================================================
+     UI PRIMITIVES
+  ====================================================================== */
+
+  function Logo({ size = 28 }) {
+    return (
+      <div className="flex items-center gap-2 select-none">
+        <div className="relative">
+          <div className="logo-grad" style={{ fontSize: size, lineHeight: 1, fontFamily:'Inter' }}>iarmoni</div>
+          <span className="logo-dot absolute" style={{
+            width: size*0.18, height: size*0.18, borderRadius: '50%',
+            top: -size*0.05, left: size*0.04,
+          }} />
+        </div>
+      </div>
+    );
+  }
+
+  function MiniLogo() {
+    return (
+      <div className="relative">
+        <div className="logo-grad" style={{ fontSize: 26, lineHeight: 1 }}>in</div>
+        <span className="logo-dot absolute" style={{
+          width: 5, height: 5, borderRadius: '50%', top: -1, left: 4,
+        }} />
+      </div>
+    );
+  }
+
+  function Pill({ children, color='armoni', size='md', solid=false, outline=true, onClick, className='' }) {
+    const base = 'inline-flex items-center justify-center font-medium transition-all focus-ring';
+    const sizes = { sm:'h-7 px-3 text-xs', md:'h-9 px-4 text-sm', lg:'h-11 px-5 text-sm' };
+    let cls;
+    if (solid) {
+      cls = `${base} ${sizes[size]} rounded-full bg-armoni-600 text-white hover:bg-armoni-700 shadow-sm`;
+    } else if (outline) {
+      cls = `${base} ${sizes[size]} rounded-full bg-white text-armoni-700 ring-1 ring-armoni-300 hover:bg-armoni-50`;
+    } else {
+      cls = `${base} ${sizes[size]} rounded-full text-armoni-700 hover:bg-armoni-50`;
+    }
+    return <button onClick={onClick} className={`${cls} ${className}`}>{children}</button>;
+  }
+
+  function IconBtn({ children, onClick, title, className='' }) {
+    return (
+      <button onClick={onClick} title={title}
+        className={`inline-flex items-center justify-center w-9 h-9 rounded-full text-slate-600 hover:text-armoni-700 hover:bg-armoni-50 transition-colors focus-ring ${className}`}>
+        {children}
+      </button>
+    );
+  }
+
+  function Card({ children, className='', hover=false, onClick }) {
+    return (
+      <div onClick={onClick}
+        className={`bg-white rounded-2xl border border-slate-200 ${hover ? 'shadow-card hover:shadow-cardHover cursor-pointer' : 'shadow-card'} transition-shadow ${className}`}>
+        {children}
+      </div>
+    );
+  }
+
+  function Badge({ children, tone='neutral', className='' }) {
+    const map = {
+      neutral: 'bg-slate-100 text-slate-600',
+      armoni:  'bg-armoni-100 text-armoni-700',
+      mint:    'bg-mint-100 text-teal-700',
+      ok:      'bg-emerald-100 text-emerald-700',
+      warn:    'bg-amber-100 text-amber-700',
+      bad:     'bg-rose-100 text-rose-700',
+      pink:    'bg-pink-100 text-pink-700',
+    };
+    return <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${map[tone]} ${className}`}>{children}</span>;
+  }
+
+  function Toggle({ value, onChange, options }) {
+    return (
+      <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 p-1">
+        {options.map(opt => (
+          <button key={opt.value} onClick={() => onChange(opt.value)}
+            className={`px-3 h-8 text-xs font-medium rounded-full transition-all ${value === opt.value ? 'bg-white text-armoni-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+            {opt.label}
+          </button>
+        ))}
+      </div>
+    );
+  }
+
+  /* ---- Multiselect dropdown ---- */
+  function useClickOutside(ref, cb) {
+    useEffect(() => {
+      function h(e) { if (ref.current && !ref.current.contains(e.target)) cb(); }
+      document.addEventListener('mousedown', h);
+      return () => document.removeEventListener('mousedown', h);
+    }, []);
+  }
+
+  function MultiSelect({ label, options, selected, onChange, searchable=false, compact=false }) {
+    const [open, setOpen] = useState(false);
+    const [q, setQ]       = useState('');
+    const ref = useRef(null);
+    useClickOutside(ref, () => setOpen(false));
+    const filtered = searchable && q ? options.filter(o => o.toLowerCase().includes(q.toLowerCase())) : options;
+    const allOn = selected.length === 0 || selected.length === options.length;
+    const labelText = selected.length === 0 || selected.length === options.length ? 'Todos' : `${selected.length} seleccionados`;
+    function toggle(v) {
+      const set = new Set(selected.length === 0 ? options : selected);
+      if (set.has(v)) set.delete(v); else set.add(v);
+      const next = Array.from(set);
+      onChange(next.length === options.length ? [] : next);
+    }
+    return (
+      <div ref={ref} className="relative">
+        <div className="text-[11px] font-medium text-slate-500 mb-1">{label}</div>
+        <button onClick={() => setOpen(o => !o)}
+          className={`w-full inline-flex items-center justify-between gap-2 ${compact ? 'h-8 px-2.5 text-xs' : 'h-9 px-3 text-sm'} rounded-lg bg-white border border-slate-200 hover:border-armoni-300 focus-ring`}>
+          <span className="truncate text-slate-700">{labelText}</span>
+          <svg className="w-4 h-4 text-slate-400" viewBox="0 0 20 20" fill="none">
+            <path d="M5 8l5 5 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        </button>
+        {open && (
+          <div className="absolute z-30 mt-1 w-72 max-h-80 overflow-auto bg-white border border-slate-200 rounded-xl shadow-lg p-2 scroll-fade anim-pop">
+            {searchable && (
+              <input value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar..."
+                className="w-full mb-2 px-3 h-8 text-xs rounded-lg border border-slate-200 focus-ring" />
+            )}
+            <div className="flex items-center justify-between px-2 py-1 text-[11px] text-slate-500">
+              <button className="hover:text-armoni-600" onClick={() => onChange([])}>Seleccionar todos</button>
+              <button className="hover:text-armoni-600" onClick={() => onChange(['__none__'])}>Quitar todos</button>
+            </div>
+            {filtered.map(o => {
+              const isOn = selected.length === 0 ? true : selected.includes(o);
+              return (
+                <label key={o} className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-armoni-50 cursor-pointer text-sm">
+                  <input type="checkbox" checked={isOn} onChange={() => toggle(o)} className="accent-armoni-600" />
+                  <span className="truncate text-slate-700">{o}</span>
+                </label>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  /* ======================================================================
+     FILTER CONTEXT
+  ====================================================================== */
+  const defaultFilters = {
+    hospital: [],
+    quirofano: [],
+    especialidad: [],
+    procedimiento: [],
+    proveedor: [],
+    tipoMaterial: [],
+    esterilizador: [],
+    lavadora: [],
+    turno: [],
+    operador: [],
+    urgencia: 'todas',     // 'todas' | 'programadas' | 'urgentes'
+    period: { months: 1 }, // último mes por defecto
+  };
+
+  const FilterCtx = createContext(null);
+
+  function filterReducer(state, action) {
+    switch (action.type) {
+      case 'set':   return { ...state, [action.key]: action.value };
+      case 'reset': return defaultFilters;
+      default:      return state;
+    }
+  }
+
+  function countActiveFilters(f) {
+    let n = 0;
+    ['hospital','quirofano','especialidad','procedimiento','proveedor','tipoMaterial','esterilizador','lavadora','turno','operador'].forEach(k => {
+      if (f[k].length > 0) n++;
+    });
+    if (f.urgencia !== 'todas') n++;
+    return n;
+  }
+
+  /* ======================================================================
+     FILTER BAR
+  ====================================================================== */
+  function FilterBar() {
+    const { filters, dispatch } = useContext(FilterCtx);
+    const [open, setOpen] = useState(false);
+    const active = countActiveFilters(filters);
+
+    return (
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-card overflow-hidden">
+        <button onClick={() => setOpen(o => !o)}
+          className="w-full flex items-center justify-between px-5 py-3 hover:bg-slate-50/50 transition-colors">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-armoni-100 grid place-items-center">
+              <svg className="w-4 h-4 text-armoni-700" viewBox="0 0 20 20" fill="none">
+                <path d="M3 5h14M6 10h8M9 15h2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              </svg>
+            </div>
+            <div className="text-left">
+              <div className="text-sm font-semibold text-slate-800">Filtros</div>
+              <div className="text-xs text-slate-500">
+                {active === 0 ? 'Sin filtros aplicados — datos de todo el hospital' : `${active} filtros activos`}
+              </div>
+            </div>
+            {active > 0 && <Badge tone="armoni">{active}</Badge>}
+          </div>
+          <div className="flex items-center gap-2">
+            {active > 0 && (
+              <button onClick={(e) => { e.stopPropagation(); dispatch({ type:'reset' }); }}
+                className="text-xs text-slate-500 hover:text-armoni-700 px-3 py-1.5 rounded-full hover:bg-armoni-50">
+                Limpiar filtros
+              </button>
+            )}
+            <svg className={`w-4 h-4 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="none">
+              <path d="M5 8l5 5 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </div>
+        </button>
+        {open && (
+          <div className="border-t border-slate-200 p-5 bg-slate-50/40 anim-fade">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              <MultiSelect label="Hospital" options={HOSPITALS}
+                selected={filters.hospital} onChange={v => dispatch({type:'set', key:'hospital', value:v})} />
+              <MultiSelect label="Quirófano" options={QUIROFANOS}
+                selected={filters.quirofano} onChange={v => dispatch({type:'set', key:'quirofano', value:v})} />
+              <MultiSelect label="Especialidad" options={ESPECIALIDADES}
+                selected={filters.especialidad} onChange={v => dispatch({type:'set', key:'especialidad', value:v})} />
+              <MultiSelect label="Procedimiento" options={PROCEDIMIENTOS} searchable
+                selected={filters.procedimiento} onChange={v => dispatch({type:'set', key:'procedimiento', value:v})} />
+              <MultiSelect label="Proveedor" options={PROVEEDORES}
+                selected={filters.proveedor} onChange={v => dispatch({type:'set', key:'proveedor', value:v})} />
+              <MultiSelect label="Tipo de material" options={TIPOS_MATERIAL}
+                selected={filters.tipoMaterial} onChange={v => dispatch({type:'set', key:'tipoMaterial', value:v})} />
+              <MultiSelect label="Esterilizador" options={ESTERILIZADORES}
+                selected={filters.esterilizador} onChange={v => dispatch({type:'set', key:'esterilizador', value:v})} />
+              <MultiSelect label="Lavadora" options={LAVADORAS}
+                selected={filters.lavadora} onChange={v => dispatch({type:'set', key:'lavadora', value:v})} />
+              <MultiSelect label="Operador" options={OPERADORES} searchable
+                selected={filters.operador} onChange={v => dispatch({type:'set', key:'operador', value:v})} />
+
+              <div>
+                <div className="text-[11px] font-medium text-slate-500 mb-1">Turno</div>
+                <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1">
+                  {TURNOS.map(t => {
+                    const on = filters.turno.includes(t);
+                    return (
+                      <button key={t} onClick={() => {
+                        const set = new Set(filters.turno);
+                        if (set.has(t)) set.delete(t); else set.add(t);
+                        dispatch({type:'set', key:'turno', value: Array.from(set)});
+                      }}
+                        className={`px-3 h-7 text-xs rounded-md ${on ? 'bg-armoni-600 text-white' : 'text-slate-600 hover:bg-armoni-50'}`}>
+                        {t}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <div className="text-[11px] font-medium text-slate-500 mb-1">Urgencia</div>
+                <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1">
+                  {[{v:'todas',l:'Todas'},{v:'programadas',l:'Programadas'},{v:'urgentes',l:'Urgentes'}].map(o => (
+                    <button key={o.v} onClick={() => dispatch({type:'set', key:'urgencia', value:o.v})}
+                      className={`px-3 h-7 text-xs rounded-md ${filters.urgencia === o.v ? 'bg-armoni-600 text-white' : 'text-slate-600 hover:bg-armoni-50'}`}>
+                      {o.l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <div className="text-[11px] font-medium text-slate-500 mb-1">Periodo</div>
+                <select value={filters.period.months}
+                  onChange={e => dispatch({type:'set', key:'period', value:{months: parseInt(e.target.value)}})}
+                  className="w-full h-9 px-3 text-sm rounded-lg bg-white border border-slate-200 focus-ring">
+                  {PERIODS.map(p => <option key={p.id} value={p.months}>{p.label}</option>)}
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  /* ======================================================================
+     KPI CARD — FOTO FIJA
+  ====================================================================== */
+  function FotoFijaCard({ kpi, thresholds, onOpen, compact=false }) {
+    const { filters } = useContext(FilterCtx);
+    const value     = periodValue(kpi, filters.period.months);
+    const varPct    = variation(kpi, filters.period.months);
+    const status    = statusFor(kpi, value, thresholds);
+    const sc        = STATUS_COLOR[status];
+    const targetT   = thresholds[kpi.id] || kpi.target;
+    const isGood    = kpi.betterDirection === 'down' ? varPct < 0 : varPct > 0;
+    const arrow     = varPct > 0 ? '↑' : varPct < 0 ? '↓' : '→';
+    const varColor  = Math.abs(varPct) < 0.05 ? 'text-slate-500' : isGood ? 'text-emerald-600' : 'text-rose-600';
+
+    // Progress to target (where applicable)
+    let progress = null;
+    if (targetT) {
+      if (targetT.type === 'lt')  progress = Math.min(100, Math.max(0, (1 - value/(targetT.value*1.5)) * 100));
+      if (targetT.type === 'gte') progress = Math.min(100, Math.max(0, value / targetT.value * 100));
+      if (targetT.type === 'eq' && targetT.value === 100) progress = value;
+    }
+
+    return (
+      <Card hover onClick={onOpen}
+        className={`p-5 relative overflow-hidden ${compact ? '' : 'min-h-[180px]'}`}>
+        <div className={`absolute top-0 left-0 right-0 h-1 ${sc.dot}`} />
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+              {AREAS.find(a => a.id === kpi.area).short}
+            </div>
+            <div className="text-sm font-semibold text-slate-800 mt-0.5 line-clamp-2">{kpi.short}</div>
+          </div>
+          {kpi.target && <Badge tone={status === 'neutral' ? 'neutral' : status}>{status === 'ok' ? 'En objetivo' : status === 'warn' ? 'Atención' : status === 'bad' ? 'Fuera' : '—'}</Badge>}
+          {!kpi.target && <Badge tone="neutral">Sin objetivo</Badge>}
+        </div>
+
+        <div className="mt-3 flex items-end gap-3">
+          <div className="text-3xl font-bold tracking-tight text-slate-900">{fmtValue(kpi, value)}</div>
+          {varPct !== 0 && (
+            <div className={`text-xs font-semibold ${varColor} mb-1.5`}>
+              {arrow} {Math.abs(varPct).toFixed(1)}%
+            </div>
+          )}
+        </div>
+
+        {progress !== null && (
+          <div className="mt-3">
+            <div className="flex justify-between text-[11px] text-slate-500 mb-1">
+              <span>
+                {targetT.type === 'lt' && `Objetivo: < ${fmtValue(kpi, targetT.value)}`}
+                {targetT.type === 'gte' && `Objetivo: ≥ ${fmtValue(kpi, targetT.value)}`}
+                {targetT.type === 'eq' && `Objetivo: ${fmtValue(kpi, targetT.value)}`}
+              </span>
+              <span className="font-medium text-slate-600">{progress.toFixed(0)}%</span>
+            </div>
+            <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-full rounded-full transition-all" style={{ width: `${progress}%`, background: sc.hex }} />
+            </div>
+          </div>
+        )}
+
+        {!progress && kpi.unit !== '%' && (
+          <div className="mt-3 text-[11px] text-slate-500">vs. periodo anterior</div>
+        )}
+
+        {kpi.subRegisters && (
+          <div className="mt-3 pt-3 border-t border-slate-100 space-y-1.5">
+            {kpi.subRegisters.map(sub => {
+              const subSlice = kpi.subHistories[sub.id].slice(-filters.period.months);
+              const subVal = subSlice.reduce((a,b)=>a+b.value,0) / subSlice.length;
+              const subStatus = subVal >= 99.5 ? 'ok' : subVal >= 97 ? 'warn' : 'bad';
+              const ssc = STATUS_COLOR[subStatus];
+              return (
+                <div key={sub.id} className="flex items-center gap-2">
+                  <span className={`w-1.5 h-1.5 rounded-full ${ssc.dot}`} />
+                  <span className="text-[11px] text-slate-600 flex-1 truncate">{sub.name}</span>
+                  <span className="text-[11px] font-semibold text-slate-700 tabular-nums">{subVal.toFixed(1)}%</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {compact ? null : (
+          <div className="mt-4 flex items-center justify-between text-[11px] text-slate-400">
+            <span className="truncate">{kpi.standard || 'Indicador interno'}</span>
+            <span className="text-armoni-600 font-medium hover:underline">Detalle →</span>
+          </div>
+        )}
+      </Card>
+    );
+  }
+
+  /* ======================================================================
+     KPI CARD — EVOLUCIÓN TEMPORAL
+  ====================================================================== */
+  // Agrupa series mensuales en trimestres (Q1..Q4). Para unidades acumulables se
+  // suman; para el resto se promedia.
+  function aggregateQuarterly(history, isCumulative) {
+    const out = [];
+    for (let i = 0; i < history.length; i += 3) {
+      const chunk = history.slice(i, i + 3);
+      if (chunk.length === 0) continue;
+      const sum = chunk.reduce((a, p) => a + p.value, 0);
+      const value = isCumulative ? sum : sum / chunk.length;
+      const d = chunk[chunk.length - 1].date;
+      const q = Math.floor(d.getMonth() / 3) + 1;
+      out.push({ date: d, label: `T${q} '${String(d.getFullYear()).slice(-2)}`, value });
+    }
+    return out;
+  }
+
+  function EvolucionView({ kpi, thresholds }) {
+    const [granularity, setGranularity] = useState('monthly');
+    const [range, setRange]   = useState(12); // rango en meses
+    const [overlay, setOverlay] = useState(false);
+    const [refLine, setRefLine] = useState(true);
+
+    const isCumulative = ['€','kWh','L','docs','kg CO₂'].includes(kpi.unit);
+
+    const series = useMemo(() => {
+      const sliced = kpi.history.slice(-range);
+      const prev   = kpi.history.slice(-range*2, -range);
+      if (granularity === 'quarterly') {
+        const agg = aggregateQuarterly(sliced, isCumulative);
+        const aggPrev = aggregateQuarterly(prev, isCumulative);
+        return agg.map((p, i) => ({
+          date: p.label,
+          actual: Number(p.value.toFixed(kpi.decimals)),
+          anterior: overlay && aggPrev[i] ? Number(aggPrev[i].value.toFixed(kpi.decimals)) : null,
+        }));
+      }
+      return sliced.map((p, i) => ({
+        date: fmtMonth(p.date),
+        actual: p.value,
+        anterior: overlay && prev[i] ? prev[i].value : null,
+      }));
+    }, [kpi.id, range, overlay, granularity, isCumulative]);
+
+    const target = thresholds[kpi.id] || kpi.target;
+
+    return (
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <Toggle value={granularity} onChange={setGranularity}
+            options={[{value:'monthly',label:'Mensual'},{value:'quarterly',label:'Trimestral'}]} />
+          <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 p-1">
+            {[3,6,12,24].map(m => (
+              <button key={m} onClick={() => setRange(m)}
+                className={`px-3 h-8 text-xs font-medium rounded-full ${range === m ? 'bg-white text-armoni-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                {m}m
+              </button>
+            ))}
+          </div>
+          <div className="ml-auto flex items-center gap-3 text-xs text-slate-600">
+            {target && (
+              <label className="inline-flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={refLine} onChange={e=>setRefLine(e.target.checked)} className="accent-armoni-600" />
+                Mostrar objetivo
+              </label>
+            )}
+            <label className="inline-flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={overlay} onChange={e=>setOverlay(e.target.checked)} className="accent-armoni-600" />
+              Comparar con año anterior
+            </label>
+          </div>
+        </div>
+
+        <div className="h-72 w-full">
+          <ResponsiveContainer>
+            <LineChart data={series} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
+              <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="#94A3B8" />
+              <YAxis tick={{ fontSize: 11 }} stroke="#94A3B8" tickFormatter={(v) => kpi.unit === '€' ? '€'+nf(v,0) : nf(v, kpi.decimals)} />
+              <Tooltip formatter={(v) => fmtValue(kpi, v)} />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
+              <Line type="monotone" dataKey="actual" name="Actual" stroke="#7C3AED" strokeWidth={2.5} dot={{ r:3, fill:'#7C3AED' }} activeDot={{ r:5 }} />
+              {overlay && <Line type="monotone" dataKey="anterior" name="Año anterior" stroke="#94A3B8" strokeWidth={1.5} strokeDasharray="5 4" dot={false} />}
+              {refLine && target && (
+                <ReferenceLine y={target.value} stroke="#F59E0B" strokeDasharray="6 4" label={{ value:`Objetivo ${fmtValue(kpi, target.value)}`, position:'right', fill:'#F59E0B', fontSize:11 }} />
+              )}
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    );
+  }
+
+  /* ======================================================================
+     KPI CARD — PREDICCIÓN
+  ====================================================================== */
+  function PrediccionView({ kpi, thresholds }) {
+    const [horizon, setHorizon] = useState(6);
+    const target = thresholds[kpi.id] || kpi.target;
+    const future = useMemo(() => predict(kpi.history, horizon), [kpi.id, horizon]);
+    const data = useMemo(() => {
+      const past = kpi.history.map(p => ({ date: fmtMonth(p.date), historico: p.value, prediccion: null, lower:null, upper:null }));
+      // Insert a bridging point so historic + prediction line up
+      if (past.length) past[past.length-1].prediccion = past[past.length-1].historico;
+      const fut = future.map(p => ({ date: fmtMonth(p.date), historico: null, prediccion: p.value, lower: p.lower, upper: p.upper }));
+      return past.concat(fut);
+    }, [kpi.id, horizon]);
+
+    return (
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-xs font-medium text-slate-500">Horizonte de predicción</span>
+          <Toggle value={horizon} onChange={setHorizon}
+            options={[{value:3,label:'3 meses'},{value:6,label:'6 meses'},{value:12,label:'12 meses'}]} />
+          <Badge tone="armoni" className="ml-auto">
+            <svg className="w-3 h-3" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.5"/><path d="M10 6v5l3 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+            Regresión lineal · estimación estadística
+          </Badge>
+        </div>
+
+        <div className="h-72 w-full">
+          <ResponsiveContainer>
+            <ComposedChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
+              <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="#94A3B8" />
+              <YAxis tick={{ fontSize: 11 }} stroke="#94A3B8" tickFormatter={(v) => kpi.unit === '€' ? '€'+nf(v,0) : nf(v, kpi.decimals)} />
+              <Tooltip formatter={(v) => v === null ? null : fmtValue(kpi, v)} />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
+              <Area type="monotone" dataKey="upper" stackId="1" stroke="none" fill="#7C3AED" fillOpacity={0.06} name="Banda superior" legendType="none" />
+              <Area type="monotone" dataKey="lower" stackId="2" stroke="none" fill="#7C3AED" fillOpacity={0} name="Banda inferior" legendType="none" />
+              <Line type="monotone" dataKey="historico" name="Histórico" stroke="#7C3AED" strokeWidth={2.5} dot={{ r:3 }} />
+              <Line type="monotone" dataKey="prediccion" name="Predicción" stroke="#7C3AED" strokeWidth={2.5} strokeDasharray="5 4" dot={{ r:3, fill:'#fff', stroke:'#7C3AED', strokeWidth:1.5 }} />
+              {target && <ReferenceLine y={target.value} stroke="#F59E0B" strokeDasharray="6 4" label={{ value:`Objetivo ${fmtValue(kpi, target.value)}`, position:'right', fill:'#F59E0B', fontSize:11 }} />}
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="bg-slate-50 rounded-xl p-3 text-xs text-slate-600 flex items-start gap-2">
+          <svg className="w-4 h-4 mt-0.5 text-amber-500 shrink-0" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zm-1 11h2v2H9v-2zm0-7h2v6H9V6z"/></svg>
+          <span>
+            La proyección se calcula mediante regresión lineal sobre los datos acumulados. La banda sombreada representa el intervalo de confianza al 95%. Es una estimación estadística, no una certeza.
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  /* ======================================================================
+     BOWIE-DICK heatmap (custom SVG)
+  ====================================================================== */
+  function DailyAutoclaveHeatmap({ title, subtitle, seedOffset = 0, missRate = 0.03 }) {
+    const autoclaves = ESTERILIZADORES.slice(0, 6);
+    const today = TODAY;
+    const days = 60;
+    const start = new Date(today.getTime() - days*24*3600*1000);
+
+    return (
+      <Card className="p-5">
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <div>
+            <div className="text-sm font-semibold text-slate-800">{title}</div>
+            <div className="text-xs text-slate-500">{subtitle}</div>
+          </div>
+          <div className="flex items-center gap-3 text-xs text-slate-600">
+            <div className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-emerald-400" /> Realizado</div>
+            <div className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-rose-400" /> Sin registro</div>
+            <div className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-slate-200" /> No laborable</div>
+          </div>
+        </div>
+        <div className="overflow-x-auto scroll-fade">
+          <div className="inline-block">
+            {autoclaves.map((ac, ri) => (
+              <div key={ac} className="flex items-center gap-2 mb-1">
+                <div className="w-24 text-xs text-slate-600 shrink-0">{ac}</div>
+                <div className="flex gap-0.5">
+                  {Array.from({length: days}).map((_, di) => {
+                    const d = new Date(start.getTime() + di*24*3600*1000);
+                    const dow = d.getDay();
+                    const isWeekend = dow === 0 || dow === 6;
+                    const seed = mulberry32(ri*31 + di + seedOffset);
+                    const r = seed();
+                    let color;
+                    if (isWeekend) color = '#E2E8F0';
+                    else if (r < missRate) color = '#FB7185';
+                    else color = '#34D399';
+                    return <div key={di} className="w-3 h-3 rounded-sm" style={{ background: color }} title={fmtDateISO(d)} />;
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
+  function BowieDickHeatmap() {
+    return <DailyAutoclaveHeatmap
+      title="Registro Bowie-Dick · últimos 60 días"
+      subtitle="Cada celda = un día laborable por autoclave"
+      seedOffset={0}
+      missRate={0.03} />;
+  }
+
+  function BiologicalHeatmap() {
+    return <DailyAutoclaveHeatmap
+      title="Registro Control Biológico · últimos 60 días"
+      subtitle="Indicador biológico (esporas de Geobacillus stearothermophilus) — diario por autoclave"
+      seedOffset={777}
+      missRate={0.05} />;
+  }
+
+  /* ======================================================================
+     KPI Detail panel (Modal-ish full card with mode switcher)
+  ====================================================================== */
+  function KpiDetail({ kpi, thresholds, onClose, setThreshold }) {
+    const { filters } = useContext(FilterCtx);
+    const [mode, setMode] = useState('foto'); // foto | evolucion | prediccion
+    const [editing, setEditing] = useState(false);
+    const value  = periodValue(kpi, filters.period.months);
+    const varPct = variation(kpi, filters.period.months);
+    const status = statusFor(kpi, value, thresholds);
+    const sc     = STATUS_COLOR[status];
+    const area   = AREAS.find(a => a.id === kpi.area);
+
+    return (
+      <div className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm flex items-start justify-center p-4 md:p-8 overflow-auto" onClick={onClose}>
+        <div onClick={e => e.stopPropagation()}
+          className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl anim-pop overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-200 flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <Badge tone="armoni">{area.name}</Badge>
+                {kpi.target && <Badge tone={status === 'neutral' ? 'neutral' : status}>{status === 'ok' ? 'En objetivo' : status === 'warn' ? 'Atención' : status === 'bad' ? 'Fuera de objetivo' : '—'}</Badge>}
+              </div>
+              <h2 className="text-lg font-semibold text-slate-900 mt-2 truncate">{kpi.name}</h2>
+              <div className="text-xs text-slate-500 mt-0.5">{kpi.formula}</div>
+            </div>
+            <IconBtn onClick={onClose} title="Cerrar">
+              <svg className="w-5 h-5" viewBox="0 0 20 20" fill="none"><path d="M6 6l8 8M14 6l-8 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+            </IconBtn>
+          </div>
+
+          <div className="px-6 py-4 flex flex-wrap items-center gap-3 border-b border-slate-100 bg-slate-50/50">
+            <div className="inline-flex rounded-full border border-slate-200 bg-white p-1">
+              {[
+                { v:'foto',       l:'Foto fija' },
+                { v:'evolucion',  l:'Evolución' },
+                { v:'prediccion', l:'Predicción' },
+              ].map(o => (
+                <button key={o.v} onClick={() => setMode(o.v)}
+                  className={`px-4 h-8 text-xs font-semibold rounded-full transition-all ${mode === o.v ? 'bg-armoni-600 text-white shadow-sm' : 'text-slate-600 hover:bg-armoni-50'}`}>
+                  {o.l}
+                </button>
+              ))}
+            </div>
+            {kpi.target && (
+              <button onClick={() => setEditing(true)}
+                className="ml-auto text-xs text-armoni-700 hover:underline">
+                Editar umbrales
+              </button>
+            )}
+          </div>
+
+          <div className="p-6 max-h-[70vh] overflow-auto scroll-fade">
+            {mode === 'foto' && (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                <div className="lg:col-span-1">
+                  <Card className="p-6">
+                    <div className="text-xs text-slate-500 uppercase tracking-wide">Valor actual ({PERIODS.find(p=>p.months===filters.period.months)?.label || filters.period.months+'m'})</div>
+                    <div className="text-4xl font-bold tracking-tight text-slate-900 mt-2">{fmtValue(kpi, value)}</div>
+                    <div className={`text-sm font-semibold mt-2 ${varPct === 0 ? 'text-slate-500' : (kpi.betterDirection === 'down' ? varPct < 0 : varPct > 0) ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      {varPct > 0 ? '↑' : varPct < 0 ? '↓' : '→'} {Math.abs(varPct).toFixed(1)}% vs. periodo anterior
+                    </div>
+                    {kpi.target && (
+                      <div className="mt-5">
+                        <div className="text-xs text-slate-500 mb-1">Objetivo</div>
+                        <div className="text-sm font-semibold text-slate-800">
+                          {kpi.target.type === 'lt' && `< ${fmtValue(kpi, kpi.target.value)}`}
+                          {kpi.target.type === 'gte' && `≥ ${fmtValue(kpi, kpi.target.value)}`}
+                          {kpi.target.type === 'eq' && `${fmtValue(kpi, kpi.target.value)}`}
+                        </div>
+                      </div>
+                    )}
+                    {kpi.standard && (
+                      <div className="mt-4">
+                        <div className="text-xs text-slate-500 mb-1">Referencia normativa</div>
+                        <div className="text-sm text-slate-700">{kpi.standard}</div>
+                      </div>
+                    )}
+                  </Card>
+                </div>
+                <div className="lg:col-span-2">
+                  {kpi.subRegisters ? (
+                    <Card className="p-5 h-full">
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <div className="text-sm font-semibold text-slate-800">Registros obligatorios</div>
+                          <div className="text-xs text-slate-500">RD 192/2023 · UNE-EN ISO 17665-1 · UNE-EN 285</div>
+                        </div>
+                        <Badge tone="armoni">{kpi.subRegisters.length} registros</Badge>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {kpi.subRegisters.map(sub => {
+                          const slice = kpi.subHistories[sub.id].slice(-filters.period.months);
+                          const v = slice.reduce((a,b)=>a+b.value,0) / slice.length;
+                          const subStatus = v >= 99.5 ? 'ok' : v >= 97 ? 'warn' : 'bad';
+                          const ssc = STATUS_COLOR[subStatus];
+                          return (
+                            <div key={sub.id} className={`p-3 rounded-xl border ${ssc.bg} border-slate-200/70`}>
+                              <div className="flex items-start justify-between">
+                                <div className="min-w-0">
+                                  <div className="text-xs font-semibold text-slate-800 truncate">{sub.name}</div>
+                                  <div className="text-[11px] text-slate-500">{sub.desc}</div>
+                                </div>
+                                <span className={`w-2 h-2 rounded-full mt-1 ${ssc.dot}`} />
+                              </div>
+                              <div className="mt-2 flex items-end justify-between">
+                                <div className="text-xl font-bold text-slate-900 tabular-nums">{v.toFixed(2)}<span className="text-sm text-slate-400 font-medium"> %</span></div>
+                                <div className={`text-[11px] font-medium ${ssc.text}`}>
+                                  {subStatus === 'ok' ? 'En objetivo' : subStatus === 'warn' ? 'Atención' : 'Fuera'}
+                                </div>
+                              </div>
+                              <div className="mt-2 h-1.5 bg-white/70 rounded-full overflow-hidden">
+                                <div className="h-full rounded-full" style={{ width: `${Math.min(100, v)}%`, background: ssc.hex }} />
+                              </div>
+                              <div className="mt-2 text-[10px] text-slate-500">
+                                {sub.scope === 'material' ? 'Verificado en cada material' : 'Verificado diariamente por autoclave'}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div className="mt-4 text-[11px] text-slate-500">
+                        El indicador agregado es la media de los {kpi.subRegisters.length} sub-registros obligatorios. Objetivo legal: 100%.
+                      </div>
+                    </Card>
+                  ) : (
+                    <Card className="p-5 h-full">
+                      <div className="text-sm font-semibold text-slate-800 mb-2">Evolución reciente (12 meses)</div>
+                      <div className="h-56">
+                        <ResponsiveContainer>
+                          <AreaChart data={kpi.history.slice(-12).map(p => ({ date: fmtMonth(p.date), value: p.value }))}>
+                            <defs>
+                              <linearGradient id={`g-${kpi.id}`} x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#7C3AED" stopOpacity={0.35} />
+                                <stop offset="100%" stopColor="#7C3AED" stopOpacity={0.0} />
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
+                            <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="#94A3B8" />
+                            <YAxis tick={{ fontSize: 11 }} stroke="#94A3B8" tickFormatter={(v) => kpi.unit === '€' ? '€'+nf(v,0) : nf(v, kpi.decimals)} />
+                            <Tooltip formatter={(v) => fmtValue(kpi, v)} />
+                            <Area type="monotone" dataKey="value" stroke="#7C3AED" strokeWidth={2.5} fill={`url(#g-${kpi.id})`} />
+                            {kpi.target && <ReferenceLine y={kpi.target.value} stroke="#F59E0B" strokeDasharray="6 4" />}
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
+                      {kpi.breakdowns && kpi.breakdowns.length > 0 && (
+                        <div className="mt-4">
+                          <div className="text-xs font-medium text-slate-500 mb-2">Desgloses disponibles</div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {kpi.breakdowns.map(b => <Badge key={b} tone="neutral">{b}</Badge>)}
+                          </div>
+                        </div>
+                      )}
+                    </Card>
+                  )}
+                </div>
+                {kpi.id === 'k4_1' && (
+                  <Fragment>
+                    <div className="lg:col-span-3"><BiologicalHeatmap /></div>
+                    <div className="lg:col-span-3"><BowieDickHeatmap /></div>
+                  </Fragment>
+                )}
+                {kpi.id === 'k4_2' && <div className="lg:col-span-3"><BowieDickHeatmap /></div>}
+              </div>
+            )}
+
+            {mode === 'evolucion' && <EvolucionView kpi={kpi} thresholds={thresholds} />}
+            {mode === 'prediccion' && <PrediccionView kpi={kpi} thresholds={thresholds} />}
+          </div>
+
+          {editing && (
+            <ThresholdsModal kpi={kpi} current={thresholds[kpi.id] || kpi.target}
+              onSave={(t) => { setThreshold(kpi.id, t); setEditing(false); }}
+              onCancel={() => setEditing(false)} />
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  /* ======================================================================
+     THRESHOLDS MODAL
+  ====================================================================== */
+  function ThresholdsModal({ kpi, current, onSave, onCancel }) {
+    const [val, setVal] = useState(current.value);
+    return (
+      <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4" onClick={onCancel}>
+        <div onClick={e=>e.stopPropagation()} className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 anim-pop">
+          <div className="text-sm font-semibold text-slate-800">Editar umbral de alerta</div>
+          <div className="text-xs text-slate-500 mt-1">{kpi.name}</div>
+          <div className="mt-4">
+            <label className="text-xs font-medium text-slate-500 mb-1 block">
+              Objetivo ({current.type === 'lt' ? '<' : current.type === 'gte' ? '≥' : '='})
+            </label>
+            <div className="flex items-center gap-2">
+              <input type="number" step="any" value={val} onChange={e=>setVal(parseFloat(e.target.value))}
+                className="flex-1 h-10 px-3 rounded-lg border border-slate-200 focus-ring" />
+              <span className="text-sm text-slate-500">{kpi.unit}</span>
+            </div>
+            <div className="mt-4 text-xs text-slate-500">
+              Verde si está dentro del objetivo, ámbar si se aproxima al límite, rojo si lo supera. Los umbrales son editables por el administrador del hospital.
+            </div>
+          </div>
+          <div className="mt-5 flex justify-end gap-2">
+            <Pill onClick={onCancel}>Cancelar</Pill>
+            <Pill solid onClick={() => onSave({ ...current, value: val })}>Guardar</Pill>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ======================================================================
+     EXPORT MENU
+  ====================================================================== */
+  function ExportMenu({ context }) {
+    const [open, setOpen] = useState(false);
+    const [done, setDone] = useState(null);
+    const ref = useRef(null);
+    useClickOutside(ref, () => setOpen(false));
+
+    function doExport(kind) {
+      setOpen(false);
+      setDone({ kind, ts: Date.now() });
+      setTimeout(() => setDone(null), 2400);
+    }
+
+    return (
+      <div ref={ref} className="relative">
+        <Pill solid size="md" onClick={() => setOpen(o => !o)}>
+          <svg className="w-4 h-4 mr-1.5" viewBox="0 0 20 20" fill="none"><path d="M10 3v9m0 0l-3-3m3 3l3-3M4 15v2h12v-2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          Exportar
+        </Pill>
+        {open && (
+          <div className="absolute right-0 mt-2 w-72 bg-white border border-slate-200 rounded-xl shadow-lg p-1.5 z-30 anim-pop">
+            <button onClick={() => doExport('pdf')} className="w-full text-left px-3 py-2 rounded-lg hover:bg-armoni-50 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-600 grid place-items-center text-xs font-bold">PDF</div>
+              <div>
+                <div className="text-sm font-medium text-slate-800">Exportar a PDF</div>
+                <div className="text-xs text-slate-500">Para adjuntar a informe</div>
+              </div>
+            </button>
+            <button onClick={() => doExport('xlsx')} className="w-full text-left px-3 py-2 rounded-lg hover:bg-armoni-50 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 grid place-items-center text-xs font-bold">XLS</div>
+              <div>
+                <div className="text-sm font-medium text-slate-800">Exportar datos a Excel/CSV</div>
+                <div className="text-xs text-slate-500">Datos subyacentes</div>
+              </div>
+            </button>
+            <button onClick={() => doExport('audit')} className="w-full text-left px-3 py-2 rounded-lg hover:bg-armoni-50 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-armoni-100 text-armoni-700 grid place-items-center">
+                <svg className="w-4 h-4" viewBox="0 0 20 20" fill="none"><path d="M6 3h6l3 3v11a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.4"/><path d="M12 3v3h3" stroke="currentColor" strokeWidth="1.4"/></svg>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-slate-800">Generar informe de auditoría</div>
+                <div className="text-xs text-slate-500">Áreas 3 y 4 — listo CatSalut</div>
+              </div>
+            </button>
+          </div>
+        )}
+        {done && (
+          <div className="absolute right-0 top-12 z-30 bg-slate-900 text-white text-xs rounded-lg px-3 py-2 shadow-lg anim-pop whitespace-nowrap">
+            {done.kind === 'pdf'   && '✓ PDF generado — armoni_dashboard.pdf'}
+            {done.kind === 'xlsx'  && '✓ Datos exportados — armoni_kpis.xlsx'}
+            {done.kind === 'audit' && '✓ Informe de auditoría generado'}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  /* ======================================================================
+     TOP NAV / HEADER
+  ====================================================================== */
+  function TopBar() {
+    return (
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-20">
+        <div className="px-4 md:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-6">
+            <div className="flex flex-col items-center">
+              <MiniLogo />
+              <span className="text-[10px] font-semibold text-armoni-700 mt-0.5">Menu</span>
+            </div>
+            <div className="hidden md:flex items-center gap-1 text-xs text-slate-400">
+              <span className="hover:text-slate-700 cursor-pointer">Armoni</span>
+              <span>/</span>
+              <span className="text-slate-700 font-medium">Dashboard de Calidad</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <Pill size="md">
+              <svg className="w-3.5 h-3.5 mr-1.5" viewBox="0 0 20 20" fill="none"><path d="M3 16l3-1 9-9-2-2-9 9-1 3z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg>
+              Send your suggestions
+              <span className="ml-2 text-slate-400">×</span>
+            </Pill>
+            <IconBtn title="Ayuda">
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5"/><path d="M9.5 9a2.5 2.5 0 015 0c0 1.5-2.5 2-2.5 3.5m0 3v.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+              <div className="text-[10px] absolute -bottom-1 right-0 text-slate-500">Help</div>
+            </IconBtn>
+            <IconBtn title="Salir">
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none"><path d="M15 4h3a2 2 0 012 2v12a2 2 0 01-2 2h-3M10 17l-5-5 5-5M5 12h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </IconBtn>
+          </div>
+        </div>
+      </header>
+    );
+  }
+
+  /* ======================================================================
+     PAGE HEADER (title + actions)
+  ====================================================================== */
+  function PageHeader({ activeArea, onBack }) {
+    return (
+      <div className="px-4 md:px-8 pt-6 pb-4 bg-slate-50">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Dashboard de Calidad</h1>
+            <p className="text-sm text-slate-500 mt-1">
+              Indicadores en tiempo real sobre todo el ciclo de instrumental: planificación, lavado, esterilización, quirófano y retorno.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <ExportMenu context={{ activeArea }} />
+            {activeArea !== 'resumen' && (
+              <button onClick={onBack} className="text-sm text-slate-500 hover:text-armoni-700 inline-flex items-center gap-1">
+                <svg className="w-4 h-4" viewBox="0 0 20 20" fill="none"><path d="M12 5l-5 5 5 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
+                Volver
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ======================================================================
+     AREA TABS
+  ====================================================================== */
+  const ICONS = {
+    resumen: (
+      <svg className="w-4 h-4" viewBox="0 0 20 20" fill="none"><rect x="3" y="3" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.5"/><rect x="11" y="3" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.5"/><rect x="3" y="11" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.5"/><rect x="11" y="11" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.5"/></svg>
+    ),
+    sterilizer: (
+      <svg className="w-4 h-4" viewBox="0 0 20 20" fill="none"><rect x="3" y="4" width="14" height="12" rx="2" stroke="currentColor" strokeWidth="1.5"/><circle cx="10" cy="10" r="3" stroke="currentColor" strokeWidth="1.5"/><circle cx="10" cy="10" r="1" fill="currentColor"/></svg>
+    ),
+    or: (
+      <svg className="w-4 h-4" viewBox="0 0 20 20" fill="none"><path d="M4 16v-2a4 4 0 014-4h4a4 4 0 014 4v2" stroke="currentColor" strokeWidth="1.5"/><circle cx="10" cy="6" r="3" stroke="currentColor" strokeWidth="1.5"/></svg>
+    ),
+    shield: (
+      <svg className="w-4 h-4" viewBox="0 0 20 20" fill="none"><path d="M10 2l7 3v5c0 4-3 7-7 8-4-1-7-4-7-8V5l7-3z" stroke="currentColor" strokeWidth="1.5"/><path d="M7 10l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+    ),
+    doc: (
+      <svg className="w-4 h-4" viewBox="0 0 20 20" fill="none"><path d="M5 3h7l3 3v11a1 1 0 01-1 1H5a1 1 0 01-1-1V4a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.5"/><path d="M12 3v3h3M7 10h6M7 13h6M7 16h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+    ),
+    leaf: (
+      <svg className="w-4 h-4" viewBox="0 0 20 20" fill="none"><path d="M4 16c2-8 8-12 14-12-1 8-5 12-12 12-1 0-2 0-2 0z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><path d="M5 16l8-8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+    ),
+  };
+
+  function AreaTabs({ active, onChange }) {
+    const tabs = [
+      { id:'resumen', label:'Resumen',  icon:'resumen', color:'#0F172A' },
+      ...AREAS.map(a => ({ id:`area-${a.id}`, label:a.short, icon:a.icon, color:a.color, num:a.id })),
+    ];
+    return (
+      <div className="px-4 md:px-8 bg-white border-b border-slate-200 sticky top-16 z-10">
+        <div className="flex items-center gap-1 overflow-x-auto scroll-fade">
+          {tabs.map(t => {
+            const isActive = active === t.id;
+            return (
+              <button key={t.id} onClick={() => onChange(t.id)}
+                className={`relative inline-flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors ${isActive ? 'text-armoni-700' : 'text-slate-500 hover:text-slate-800'}`}>
+                {t.num && <span className="text-[10px] font-bold text-slate-400">{t.num}</span>}
+                <span style={{ color: isActive ? t.color : undefined }}>{ICONS[t.icon]}</span>
+                {t.label}
+                {isActive && <span className="absolute bottom-0 left-2 right-2 h-0.5 rounded-full" style={{ background: t.color }} />}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  /* ======================================================================
+     SUMMARY VIEW
+  ====================================================================== */
+  function SummaryView({ thresholds, onOpenKpi, onGoToArea }) {
+    const { filters } = useContext(FilterCtx);
+
+    // Overall KPI counts
+    const counts = useMemo(() => {
+      let ok=0, warn=0, bad=0, neutral=0;
+      KPIS.forEach(k => {
+        const v = periodValue(k, filters.period.months);
+        const s = statusFor(k, v, thresholds);
+        if (s === 'ok') ok++;
+        else if (s === 'warn') warn++;
+        else if (s === 'bad') bad++;
+        else neutral++;
+      });
+      return { ok, warn, bad, neutral };
+    }, [filters.period.months, thresholds]);
+
+    return (
+      <div className="space-y-6">
+        {/* Vital signs banner */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <SummaryStat icon="check" tone="ok"     label="En objetivo"   value={counts.ok}   total={KPIS.length} />
+          <SummaryStat icon="warn"  tone="warn"   label="En atención"   value={counts.warn} total={KPIS.length} />
+          <SummaryStat icon="bad"   tone="bad"    label="Fuera"         value={counts.bad}  total={KPIS.length} />
+          <SummaryStat icon="info"  tone="neutral" label="Sin objetivo" value={counts.neutral} total={KPIS.length} />
+        </div>
+
+        {/* Áreas */}
+        {AREAS.map(area => (
+          <section key={area.id} className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl grid place-items-center" style={{ background: area.color + '20', color: area.color }}>
+                {ICONS[area.icon]}
+              </div>
+              <div className="flex-1">
+                <h2 className="text-base font-semibold text-slate-900">
+                  <span className="text-slate-400 font-medium mr-2">Área {area.id}</span>
+                  {area.name}
+                </h2>
+                <p className="text-xs text-slate-500">{KPIS.filter(k => k.area === area.id).length} indicadores</p>
+              </div>
+              <button onClick={() => onGoToArea(`area-${area.id}`)} className="text-xs font-medium text-armoni-700 hover:underline">
+                Ver detalle →
+              </button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {KPIS.filter(k => k.area === area.id).map(kpi => (
+                <FotoFijaCard key={kpi.id} kpi={kpi} thresholds={thresholds} onOpen={() => onOpenKpi(kpi.id)} />
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+    );
+  }
+
+  function SummaryStat({ icon, tone, label, value, total }) {
+    const map = {
+      ok:      { bg:'bg-emerald-50',  ring:'ring-emerald-200', dot:'text-emerald-600', bar:'bg-emerald-400' },
+      warn:    { bg:'bg-amber-50',    ring:'ring-amber-200',   dot:'text-amber-600',   bar:'bg-amber-400' },
+      bad:     { bg:'bg-rose-50',     ring:'ring-rose-200',    dot:'text-rose-600',    bar:'bg-rose-400' },
+      neutral: { bg:'bg-slate-50',    ring:'ring-slate-200',   dot:'text-slate-500',   bar:'bg-slate-300' },
+    };
+    const m = map[tone];
+    const pct = total ? (value/total)*100 : 0;
+    const iconSvg = {
+      check: <path d="M5 10l3 3 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>,
+      warn:  <path d="M10 2l8 14H2L10 2zM10 8v4M10 14v.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>,
+      bad:   <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>,
+      info:  <path d="M10 13V9M10 7v.5M10 18a8 8 0 100-16 8 8 0 000 16z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>,
+    };
+    return (
+      <Card className={`p-4 ring-1 ${m.ring}`}>
+        <div className="flex items-start gap-3">
+          <div className={`w-10 h-10 rounded-xl ${m.bg} grid place-items-center ${m.dot}`}>
+            <svg className="w-5 h-5" viewBox="0 0 20 20" fill="none">{iconSvg[icon]}</svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-xs text-slate-500">{label}</div>
+            <div className="text-2xl font-bold text-slate-900 mt-0.5">{value}<span className="text-sm text-slate-400 font-medium"> / {total}</span></div>
+            <div className="mt-2 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+              <div className={`h-full ${m.bar}`} style={{ width: `${pct}%` }} />
+            </div>
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
+  /* ======================================================================
+     AREA VIEW (single area, with mode selector + larger detail)
+  ====================================================================== */
+  function AreaView({ area, thresholds, onOpenKpi }) {
+    const { filters } = useContext(FilterCtx);
+    const [mode, setMode] = useState('foto');
+    const kpis = KPIS.filter(k => k.area === area.id);
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl grid place-items-center" style={{ background: area.color + '20', color: area.color }}>
+            {ICONS[area.icon]}
+          </div>
+          <div className="flex-1">
+            <div className="text-xs text-slate-400 font-medium">ÁREA {area.id}</div>
+            <h2 className="text-xl font-bold text-slate-900">{area.name}</h2>
+          </div>
+          <div className="inline-flex rounded-full border border-slate-200 bg-white p-1">
+            {[
+              { v:'foto', l:'Foto fija' },
+              { v:'evolucion', l:'Evolución' },
+              { v:'prediccion', l:'Predicción' },
+            ].map(o => (
+              <button key={o.v} onClick={() => setMode(o.v)}
+                className={`px-4 h-8 text-xs font-semibold rounded-full transition-all ${mode === o.v ? 'bg-armoni-600 text-white shadow-sm' : 'text-slate-600 hover:bg-armoni-50'}`}>
+                {o.l}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {mode === 'foto' && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {kpis.map(k => <FotoFijaCard key={k.id} kpi={k} thresholds={thresholds} onOpen={() => onOpenKpi(k.id)} />)}
+          </div>
+        )}
+
+        {mode === 'evolucion' && (
+          <div className="space-y-4">
+            {kpis.map(k => (
+              <Card key={k.id} className="p-5">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <div className="text-xs text-slate-500 font-medium uppercase tracking-wide">{k.short}</div>
+                    <div className="text-base font-semibold text-slate-900 mt-0.5">{k.name}</div>
+                  </div>
+                  <button onClick={() => onOpenKpi(k.id)} className="text-xs text-armoni-700 hover:underline">Ver detalle completo →</button>
+                </div>
+                <EvolucionView kpi={k} thresholds={thresholds} />
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {mode === 'prediccion' && (
+          <div className="space-y-4">
+            {kpis.map(k => (
+              <Card key={k.id} className="p-5">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <div className="text-xs text-slate-500 font-medium uppercase tracking-wide">{k.short}</div>
+                    <div className="text-base font-semibold text-slate-900 mt-0.5">{k.name}</div>
+                  </div>
+                  <button onClick={() => onOpenKpi(k.id)} className="text-xs text-armoni-700 hover:underline">Ver detalle completo →</button>
+                </div>
+                <PrediccionView kpi={k} thresholds={thresholds} />
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {area.id === 4 && (
+          <div className="space-y-4">
+            <BiologicalHeatmap />
+            <BowieDickHeatmap />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  /* ======================================================================
+     APP ROOT
+  ====================================================================== */
+  function App() {
+    const [filters, dispatch] = useReducer(filterReducer, defaultFilters);
+    const [activeTab, setActiveTab] = useState('resumen');
+    const [openKpi, setOpenKpi]     = useState(null);
+    const [thresholds, setThresholds] = useState({}); // kpiId -> { type, value }
+
+    function setThreshold(kpiId, t) {
+      setThresholds(prev => ({ ...prev, [kpiId]: t }));
+    }
+
+    const activeArea = activeTab.startsWith('area-')
+      ? AREAS.find(a => a.id === parseInt(activeTab.split('-')[1]))
+      : null;
+
+    return (
+      <FilterCtx.Provider value={{ filters, dispatch }}>
+        <div className="min-h-screen bg-slate-50">
+          <TopBar />
+          <PageHeader activeArea={activeTab} onBack={() => setActiveTab('resumen')} />
+          <AreaTabs active={activeTab} onChange={setActiveTab} />
+
+          <div className="px-4 md:px-8 py-6 space-y-5">
+            <FilterBar />
+            {activeTab === 'resumen'
+              ? <SummaryView thresholds={thresholds} onOpenKpi={setOpenKpi} onGoToArea={setActiveTab} />
+              : activeArea
+                ? <AreaView area={activeArea} thresholds={thresholds} onOpenKpi={setOpenKpi} />
+                : null}
+          </div>
+
+          <footer className="px-4 md:px-8 py-6 text-xs text-slate-400 flex items-center justify-between border-t border-slate-200 mt-8 bg-white">
+            <div className="flex items-center gap-2">
+              <MiniLogo />
+              <span>· Armoni · Plataforma de trazabilidad quirúrgica</span>
+            </div>
+            <div>Datos demostrativos · Hospital de Terrassa · {fmtMonthLong(TODAY)}</div>
+          </footer>
+
+          {openKpi && (
+            <KpiDetail
+              kpi={KPIS.find(k => k.id === openKpi)}
+              thresholds={thresholds}
+              setThreshold={setThreshold}
+              onClose={() => setOpenKpi(null)}
+            />
+          )}
+        </div>
+      </FilterCtx.Provider>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

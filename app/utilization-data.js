@@ -1,0 +1,132 @@
+// Utilization detail — opens from KPI 4 "62%" link.
+// Lists kits sent to OR with their actual usage rate + unused instruments.
+
+window.KPI_DATA.UTILIZATION = [
+  {
+    id: 'UTIL-2026-0142',
+    lot: 'Caja Laparoscopia Avanzada',
+    lotRef: 'KIT-LAP-A2',
+    surgery: { date: '2026-05-15', spec: 'Cirugía General', proc: 'Colecistectomía laparoscópica', surgeon: 'Dr. Ramos', or: 'Quirófano 2' },
+    sent: 48, used: 19,
+    unused: [
+      { name: 'Pinza fenestrada Johann', qty: 2 },
+      { name: 'Disector Maryland 5 mm',  qty: 1 },
+      { name: 'Endoclip ML 10 mm',       qty: 4 },
+      { name: 'Pinza intestinal atraum.', qty: 2 },
+    ],
+  },
+  {
+    id: 'UTIL-2026-0141',
+    lot: 'Set Artroscopia Rodilla',
+    lotRef: 'KIT-ART-R3',
+    surgery: { date: '2026-05-14', spec: 'Traumatología', proc: 'Meniscectomía parcial', surgeon: 'Dra. Puig', or: 'Quirófano 1' },
+    sent: 32, used: 14,
+    unused: [
+      { name: 'Cazoleta artros. recta',    qty: 2 },
+      { name: 'Sonda palpadora 4 mm',      qty: 1 },
+      { name: 'Pinza basket curva',        qty: 1 },
+      { name: 'Cánula flujo continuo',     qty: 2 },
+    ],
+  },
+  {
+    id: 'UTIL-2026-0140',
+    lot: 'Caja Cirugía General Mayor',
+    lotRef: 'KIT-CGM-1',
+    surgery: { date: '2026-05-14', spec: 'Cirugía General', proc: 'Hernia inguinal abierta', surgeon: 'Dra. Marín', or: 'Quirófano 4' },
+    sent: 64, used: 22,
+    unused: [
+      { name: 'Pinza Kocher 18 cm',        qty: 4 },
+      { name: 'Separador Farabeuf',        qty: 2 },
+      { name: 'Pinza Allis 16 cm',         qty: 6 },
+      { name: 'Tijera Mayo curva',         qty: 2 },
+      { name: 'Portaagujas Mayo-Hegar',    qty: 3 },
+    ],
+  },
+  {
+    id: 'UTIL-2026-0139',
+    lot: 'Set Columna Posterior',
+    lotRef: 'KIT-COL-P1',
+    surgery: { date: '2026-05-13', spec: 'Traumatología', proc: 'Discectomía L4-L5', surgeon: 'Dra. Bonet', or: 'Quirófano 1' },
+    sent: 86, used: 41,
+    unused: [
+      { name: 'Pinza ósea Kerrison 3 mm',  qty: 1 },
+      { name: 'Gubia Stille 18 cm',        qty: 1 },
+      { name: 'Separador Gelpi 22 cm',     qty: 2 },
+      { name: 'Cazoleta Volkmann nº 4',    qty: 2 },
+    ],
+  },
+  {
+    id: 'UTIL-2026-0138',
+    lot: 'Caja Microcirugía ORL',
+    lotRef: 'KIT-ORL-M2',
+    surgery: { date: '2026-05-13', spec: 'ORL', proc: 'Septoplastia + turbinoplastia', surgeon: 'Dr. Tomás', or: 'Quirófano 3' },
+    sent: 38, used: 25,
+    unused: [
+      { name: 'Espéculo nasal Killian',    qty: 1 },
+      { name: 'Pinza Blakesley recta',     qty: 2 },
+      { name: 'Tijera ORL curva 14 cm',    qty: 1 },
+    ],
+  },
+  {
+    id: 'UTIL-2026-0137',
+    lot: 'Set Cataratas Premium',
+    lotRef: 'KIT-OFT-C4',
+    surgery: { date: '2026-05-12', spec: 'Oftalmología', proc: 'Facoemulsificación + LIO', surgeon: 'Dr. Albert', or: 'Quirófano 6' },
+    sent: 24, used: 21,
+    unused: [
+      { name: 'Anillo de tensión capsular', qty: 1 },
+      { name: 'Pinza capsulorrexis recta',  qty: 1 },
+    ],
+  },
+  {
+    id: 'UTIL-2026-0136',
+    lot: 'Caja Vascular Periférico',
+    lotRef: 'KIT-VAS-P1',
+    surgery: { date: '2026-05-12', spec: 'Cirugía Vascular', proc: 'Bypass femoropoplíteo', surgeon: 'Dr. Vidal', or: 'Quirófano 4' },
+    sent: 72, used: 38,
+    unused: [
+      { name: 'Pinza vascular Satinsky',   qty: 1 },
+      { name: 'Disector Mixter 23 cm',     qty: 2 },
+      { name: 'Pinza bulldog curva',       qty: 4 },
+      { name: 'Túneles vasculares 5 mm',   qty: 1 },
+    ],
+  },
+  {
+    id: 'UTIL-2026-0135',
+    lot: 'Set Cirugía Plástica',
+    lotRef: 'KIT-PLA-1',
+    surgery: { date: '2026-05-11', spec: 'Cirugía Plástica', proc: 'Reducción mamaria', surgeon: 'Dra. Esteve', or: 'Quirófano 5' },
+    sent: 56, used: 23,
+    unused: [
+      { name: 'Pinza Adson sin dientes',   qty: 3 },
+      { name: 'Tijera Stevens 11 cm',      qty: 2 },
+      { name: 'Separador Senn-Mueller',    qty: 2 },
+      { name: 'Portaagujas Castroviejo',   qty: 1 },
+    ],
+  },
+  {
+    id: 'UTIL-2026-0134',
+    lot: 'Caja Laparoscopia Básica',
+    lotRef: 'KIT-LAP-B5',
+    surgery: { date: '2026-05-11', spec: 'Cirugía General', proc: 'Apendicectomía laparoscópica', surgeon: 'Dra. Costa', or: 'Quirófano 5' },
+    sent: 36, used: 17,
+    unused: [
+      { name: 'Pinza fenestrada Johann',   qty: 1 },
+      { name: 'Endoloop reabsorbible',     qty: 3 },
+      { name: 'Disector Maryland 5 mm',    qty: 1 },
+    ],
+  },
+  {
+    id: 'UTIL-2026-0133',
+    lot: 'Set Trauma Mayor',
+    lotRef: 'KIT-TRM-M1',
+    surgery: { date: '2026-05-10', spec: 'Traumatología', proc: 'Osteosíntesis fémur', surgeon: 'Dr. Soler', or: 'Quirófano 1' },
+    sent: 92, used: 48,
+    unused: [
+      { name: 'Placa LCP 12 orificios',    qty: 1 },
+      { name: 'Tornillo cortical 4.5×40',  qty: 8 },
+      { name: 'Broca Ø 3.2 mm',            qty: 2 },
+      { name: 'Pinza reducción ósea',      qty: 2 },
+    ],
+  },
+];
