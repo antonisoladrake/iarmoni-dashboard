@@ -69,7 +69,7 @@ function PageHead() {
     <div className="page-head">
       <div>
         <h1 className="page-h1">Cuadro de mando Avanzado</h1>
-        <div className="page-sub">Hospital de Terrassa · iArmoni · trazabilidad y eficiencia quirúrgica</div>
+        <div className="page-sub">Hospital General · iArmoni · trazabilidad y eficiencia quirúrgica</div>
       </div>
       <button className="date-picker">
         <UiIcon name="calendar" size={20} />
